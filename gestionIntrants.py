@@ -47,12 +47,12 @@ def lireBDDMP():
                 quantite = feuille_bdd.cell_value(i,17)/1000
                 unit_achat = "m3"
             elif "kg" in unit_achat.lower():
-                quantite = feuille_bdd.cell_value(i,5)
+                quantite = feuille_bdd.cell_value(i,17)
             elif "cam" in unit_achat.lower(): #Camion
                 quantite = p.tonnage_camion*1000
                 unit_achat = "kg"
             elif "ton" in unit_achat.lower() or "t" in unit_achat.lower():
-                quantite = feuille_bdd.cell_value(i,14)*1000
+                quantite = feuille_bdd.cell_value(i,17)
                 unit_achat = "kg"
             elif unit_achat.lower()=="pce":
                 quantite = feuille_bdd.cell_value(i,17)*p.MASSE_PAR_PALETTE
