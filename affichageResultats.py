@@ -275,7 +275,7 @@ def entetes_resultats_generaux(usines:list, nom_fichier:str):
     feuilleprinc['C7'] = "Total:"
     feuilleprinc['D7'] = "=TEXT(SUM(D11:D"+str(199)+"), \"# ##0\")&+\" tCO2e\""
     feuilleprinc['E7'] = "et"
-    feuilleprinc['F7'] = "=TEXT(1000*SUM(D11:D"+str(199)+")/"+str(production_totale)+", \"# ##0\")&+\" kgCO2e/m3\""
+    feuilleprinc['F7'] = "=TEXT(1000*SUM(D11:D"+str(199)+")/"+str(production_totale)+", \"# ##0,0\")&+\" kgCO2e/m3\""
     rouge = openpyxl.styles.colors.Color(rgb='00FF0000')
     for c in "CDEF":
         feuilleprinc[c+"7"].font = Font(size=18, color = rouge, bold=True)
