@@ -26,6 +26,8 @@ def lireBDDMP():
         sys.exit("Le fichier des intrants n'est pas trouvé à l'emplacement "+p.DIRECTION_FICHIER_INTRANTS)
     feuille_bdd = document.sheet_by_index(0)
     nbrows = feuille_bdd.nrows
+    MPInclues = [182757, 180409]
+    CP_exclus = [50500,49520,40210,7170,49700,29530,91410,44850,44850,1370]
     result = [["idMP","nomMP", "refMP", "client","famille","fournisseur", "cp_depart", "cp_depot_arrivee", "pays_depart","quantite","unité"]]
     #On lit chaque ligne du fichier d'achat et on récupère les colonnes intéressantes
     for i in range(1,nbrows):
@@ -39,47 +41,38 @@ def lireBDDMP():
         cp_depart = feuille_bdd.cell_value(i,11)
         pays_depart = feuille_bdd.cell_value(i,12)
         
-        unit_achat = feuille_bdd.cell_value(i,16)
-        if cp_depart not in [50500,49520,40210,7170,49700,29530,91410,44850,44850,1370] and num_depot_arrive!=369:
-            if "m3" in unit_achat.lower():
-                quantite = feuille_bdd.cell_value(i,17)
-            elif "l" in unit_achat.lower():
-                quantite = feuille_bdd.cell_value(i,17)/1000
-                unit_achat = "m3"
-            elif "kg" in unit_achat.lower():
-                quantite = feuille_bdd.cell_value(i,17)
-            elif "cam" in unit_achat.lower(): #Camion
-                quantite = p.tonnage_camion*1000
-                unit_achat = "kg"
-            elif "ton" in unit_achat.lower() or "t" in unit_achat.lower():
-                quantite = feuille_bdd.cell_value(i,17)
-                unit_achat = "kg"
-            elif unit_achat.lower()=="pce":
-                quantite = feuille_bdd.cell_value(i,17)*p.MASSE_PAR_PALETTE
-                unit_achat = "kg"
-            elif unit_achat.lower() in "big bag big-bag bb" or "bb" in unit_achat.lower():
-                quantite = feuille_bdd.cell_value(i,17)*p.VOLUME_PAR_BIGBAG
-                unit_achat = "m3"
-            elif unit_achat.lower() in "sac" or "sac" in unit_achat.lower():
-                if feuille_bdd.cell_value(i,15).lower() =="kg":
-                    unit_achat = 'kg'
-                    quantite = feuille_bdd.cell_value(i,17)
-                else:    
-                    quantite, unit= gestionpb_volume_sac(nomMP)
-                    quantite *=feuille_bdd.cell_value(i,17)
-                    unit_achat = unit
-            else:
-                quantite = 0
-                fonctionsMatrices.print_log_erreur("Unité inconnue pour "+str(nomMP)+": "+ unit_achat, inspect.stack()[0][3])
-            
-            #On transpose le numero de depot en code postal du site
-            try:
-                cp_depot_arrivee = int(fonctionsMatrices.recherche_elem(num_depot_arrive,p.CP_SITES_FLORENTAISE,0,2))
-            except ValueError:
+        #On transpose le numero de depot en code postal du site
+        try:
+            cp_depot_arrivee = int(fonctionsMatrices.recherche_elem(num_depot_arrive,p.CP_SITES_FLORENTAISE,0,2))
+        except ValueError:
+            if num_depot_arrive!= 369:
                 fonctionsMatrices.print_log_erreur("Code postal du site "+str(num_depot_arrive)+" non trouvé", inspect.stack()[0][3])
                 cp_depot_arrivee = 44850
-
-            result.append([idMP,nomMP, refMP, client,famille,fournisseur, cp_depart, cp_depot_arrivee, pays_depart,quantite,unit_achat.lower()])
+                
+        if (cp_depart not in CP_exclus or cp_depart==cp_depot_arrivee or idMP in MPInclues) and num_depot_arrive!=369:
+            for n in [5,6,7,14]:
+                quantite = 0
+                unit = "kg"
+                qte = feuille_bdd.cell_value(i,n)
+                if qte =="":
+                    qte = 0
+                if qte>0:
+                    if n == 5:#KG
+                        unit = "kg"
+                        quantite = qte
+                    elif n== 6:#M3
+                        unit = "m3"
+                        quantite = qte
+                    elif n==7:#PALETTES
+                        unit = "kg"
+                        quantite = p.MASSE_PAR_PALETTE*qte*1000
+                    elif n ==14:#TONNES
+                        unit = "kg"
+                        quantite = qte*1000
+                    break
+                    
+            
+            result.append([idMP,nomMP, refMP, client,famille,fournisseur, cp_depart, cp_depot_arrivee, pays_depart,quantite,unit.lower()])
     return result
 
 
@@ -214,6 +207,7 @@ def associerMPetFE_fab(MP_familles_N:list,FE_engrais:list,FE_familles:list):
 
 def associer_nom_FEfab(listeAchats:list, MP_et_FE:list):
     nomsMP = fonctionsMatrices.liste_unique(fonctionsMatrices.extraire_colonne_n(1, listeAchats))
+    
     MP_et_FEok = [x for x in MP_et_FE if x[0]!=""]
     n = len(MP_et_FEok)
     compte = 0
@@ -224,6 +218,7 @@ def associer_nom_FEfab(listeAchats:list, MP_et_FE:list):
     liste_introuves = []
     for i in range(1,len(nomsMP)):
         nom = nomsMP[i]
+        
         #On cherche le facteur d'émission à la FABRICATION de la matière première (en kgCO2e par tonne de MP)
         trouve = False
         #On parcourt la liste des facteurs d'émission
@@ -470,27 +465,29 @@ def corriger_noms_massesvol(masses_vol:list,MP_et_FE:list, listeAchats:list):
 
 def calc_fret_final(fret:list,MP_et_FE:list):
     for mp in fret[1:]:
+        nomMP = mp[0]
+        
         #Recherche du FE de fabrication dans MP_et_FE
         FE_MPfab = 0
         for fe in MP_et_FE[1:]:
             if fe[0].lower() in mp[0].lower() or mp[0].lower() in fe[0].lower():
                 FE_MPfab = fe[1]
                 break
-        tonnage = mp[5]
-        FE_MPtrans_cumule = mp[6]+mp[7]
-        FE_MPtrans_moy = mp[8]+mp[9]
+        tonnage = mp[7]
+        FE_MPtrans_cumule = mp[8]+mp[9]
+        FE_MPtrans_moy = mp[10]+mp[11]
         #Les FE sont toujours en kgCO2e/t
         mp.append(FE_MPfab)
         mp.append(FE_MPfab+FE_MPtrans_cumule)#Pas beaucoup de sens tel quel mais besoin pour la suite du calcul
         mp.append(FE_MPfab+FE_MPtrans_moy)#Pas nécessaire à la suite mais utile pour le BC produits
-        mp.append(tonnage*mp[12]/1000) #BC cumulé matière avec conversion en t de CO2e   #(en colonne 15)
-        mp.append(tonnage*mp[13]/1000 ) #BC moyen matière avec conversion en t de CO2e    #(en colonne 16)
+        mp.append(tonnage*mp[14]/1000) #BC cumulé matière avec conversion en t de CO2e   #(en colonne 15)
+        #mp.append(tonnage*mp[15]/1000 ) #BC moyen matière avec conversion en t de CO2e    #(en colonne 16)
     
     fret[0].append("FE fabrication/extraction (kgCO2e/t)")
     fret[0].append("Somme FE fabri. +FE tranport cumulé (kgCO2e/t)")
     fret[0].append("Somme FE fabri. +FE tranport moyen (kgCO2e/t)")
     fret[0].append("BC cumulé de l'intrant (tCO2e)")
-    fret[0].append("BC moyen de l'intrant (tCO2e)")
+    #fret[0].append("BC moyen de l'intrant (tCO2e)")
     
     return fret
 

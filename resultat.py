@@ -16,32 +16,40 @@ def resultat_somme_simple():
 def regrouper_postes_resultat():
     total = [["", "Fret amont", "Fret aval", "Sacherie", "Mat. Prem.", "Energie","Utilisation/EoL", "Autre", "Total"]]
     total.append(["Emissions totales (tCO2e)"]+[0 for x in total[0][1:]])    #BC total
-    
+    total.append(["Emissions totales ramenées à la prod.(kgCO2e/m3)"]+[0 for x in total[0][1:]])    #BC ramené a la prod
+    prod_totale = sum([x[1] for x in p.PROD_PAR_SITE])
     for poste in p.MATRICE_RESULTAT[1:]:
         if poste[0] in ["MP bateau", "MP route"]:
             total[1][1]+=poste[2][0]
+            total[2][1]+=1000*poste[2][0]/prod_totale
             
         elif poste[0] in ["Ventes pro", "Ventes Jardineries", "Interdepot"]:
             total[1][2]+=poste[2][0]
+            total[2][2]+=1000*poste[2][0]/prod_totale
             
         elif poste[0] in ["Matières Premières"]:
             total[1][4]+=poste[2][0]
+            total[2][4]+=1000*poste[2][0]/prod_totale
             
         elif poste[0] in ["CO2 issu de la tourbe","Protoxyde d'azote"]:
             total[1][6]+=poste[2][0]
+            total[2][6]+=1000*poste[2][0]/prod_totale
             
         elif poste[0] in ["Electricite","Fuel", "Electricité"]:
             total[1][5]+=poste[2][0]
+            total[2][5]+=1000*poste[2][0]/prod_totale
             
         elif poste[0] in ["PE neuf","PE recyclé", "PVC", "Carton",
                           "Autres Emballages", "Fret amont des emballages"]:
             total[1][3]+=poste[2][0]
+            total[2][3]+=1000*poste[2][0]/prod_totale
             
         else:
             total[1][-2]+=poste[2][0]
+            total[2][-2]+=1000*poste[2][0]/prod_totale
             
     total[1][-1] = sum(total[1][1:-1])
-    
+    total[2][-1] = sum(total[2][1:-1])
     return total
 
 def creerMatriceResultat():

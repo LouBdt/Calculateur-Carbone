@@ -74,7 +74,7 @@ def init():
     global FE_PEBD_recy; FE_PEBD_recy = 202  #kgCO2e/t
     global MASSE_SURFACIQUE_PET; MASSE_SURFACIQUE_PET = 150 #g/m²
     
-    
+
     fonctionsMatrices.charger_parametres()
     
     afficherFleurs()

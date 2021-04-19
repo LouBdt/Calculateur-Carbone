@@ -67,7 +67,7 @@ def calc_fret_par_MP(listeAchatsFret:list, masse_vol_MP:list, FE_route, FE_batea
     liste_u_achats = fonctionsMatrices.liste_unique(fonctionsMatrices.extraire_colonne_n(1,listeAchats))
     #Parallèlement au calcul, on va enregistrer la distance parcourue pour livrer chaque dépot
     usines = [[x[2],x[1]] for x in p.CP_SITES_FLORENTAISE if x[3]<=p.ANNEE]
-    
+    compte_km_total = 0
                             #tonnage route bateau BCroute BCbateau
     resultat_usine_MP  = [[x, [[y, 0,0,0,0,0] for y in usines if y[1]!="Support"]] for x in liste_u_achats]
     resultat_usine_MP .insert(0,["MP", "id usine (CP/Nom)", "tonnage", "km route", "km bateau", "BC route (tco2e)", "BC bateau (tco2e)"])
@@ -82,7 +82,7 @@ def calc_fret_par_MP(listeAchatsFret:list, masse_vol_MP:list, FE_route, FE_batea
         nomMP = mp[0]
         #Pour compter les quantités
         tonnage_tot = 0
-        
+        idMP = fonctionsMatrices.recherche_elem(nomMP, listeAchats, 1,0)
         #On va chercher la masse volumique pour déterminer le tonnage
         masse_volumique = 1
         for mv in masse_vol_MP:
@@ -99,7 +99,10 @@ def calc_fret_par_MP(listeAchatsFret:list, masse_vol_MP:list, FE_route, FE_batea
             cp_site_depot = usine[0][0] 
             for j in range(len(listeAchats)):   #On parcourt la liste des achats
                 depot_arrive = listeAchats[j][7] #Code postal du depot d'arrivee de la matiere premiere pour cette livraison
+                
                 if cp_site_depot== depot_arrive and listeAchats[j][1]==nomMP:        #Si c'est la MP qui nous intéresse 
+                    famille = listeAchats[j][4]
+                    
                     nombre_livraisons_route_tot   +=1
                     nombre_livraisons_route_usine +=1
                     quantite = listeAchats[j][9]
@@ -120,7 +123,7 @@ def calc_fret_par_MP(listeAchatsFret:list, masse_vol_MP:list, FE_route, FE_batea
                     #On récupère le calcul de la distance de fret 
                     distanceRoute, distanceBateau, trajets, nombre_livraisons_bateau_supp = calcul_distance_fret_amont(
                         listeAchats[j], trajets, import_terrestre,import_maritime)
-                    
+                    compte_km_total += (distanceRoute+distanceBateau)
                     sommeRoute_tot  += distanceRoute
                     sommeBateau_tot += distanceBateau
                     nombre_livraisons_bateau_usine += nombre_livraisons_bateau_supp
@@ -135,7 +138,8 @@ def calc_fret_par_MP(listeAchatsFret:list, masse_vol_MP:list, FE_route, FE_batea
                     usine[5]+=emissionsBateau
                     if "tourbe" in nomMP.lower():
                         p.COMPARAISON_TOURBE[0]+= ((distanceRoute*FE_route+distanceBateau*FE_bateau)*tonnage)/1000
-            # print(nomMP+"  "+str(cp_site_depot)+"  "+str(usine[1])+"t  "+str(usine[4])+"tCO2e" )
+                    
+            # print(nomMP+"  "+str(cp_site_depot)+"  "+str(usine[2])+"km  "+str(usine[4])+"tCO2e" )
         if nombre_livraisons_route_tot  !=0:
            moyenneRoute_tot = sommeRoute_tot/nombre_livraisons_route_tot
         else:
@@ -150,18 +154,18 @@ def calc_fret_par_MP(listeAchatsFret:list, masse_vol_MP:list, FE_route, FE_batea
         #Le but ici n'est pas d'avoir le BC du fret amont mais seulement un FE par tonne: on ne s'intéresse pas encoe aux quantités.
         #On prend juste (distance cumulée ou moyenne)*(FE du moyen de transport)
         #Comme ce FE est en kgCO2.t-1.km-1 on a bien à la fin des kgCO2.t-1
-        fretMP.append([nomMP, sommeRoute_tot,sommeBateau_tot, 
+        fretMP.append([nomMP,idMP,famille, sommeRoute_tot,sommeBateau_tot, 
                        moyenneRoute_tot, moyenneBateau_tot, tonnage_tot,
                        FE_route*sommeRoute_tot, FE_bateau*sommeBateau_tot,
                        FE_route*moyenneRoute_tot, FE_bateau*moyenneBateau_tot,
                        masse_volumique
                        ])
-    fretMP.insert(0,["nomMP", "Somme du fret route (km)", "Somme du fret naval (km)",
+    fretMP.insert(0,["nomMP","ID mp", "Famille BC", "Somme du fret route (km)", "Somme du fret naval (km)",
                      "Moyenne de fret routier (km)", "Moyenne de fret naval (km)", "Tonnage",
                      "FE route(kgCO2e/t) cumulé", "FE bateau(kgCO2e/t) cumulé", 
                      "FE route(kgCO2e/t) moyen","FE bateau(kgCO2e/t) moyen",
                      "Masse volumique (t/m3)"])
-    
+    print("Km amont total : "+str(int(compte_km_total))+"km")
     if p.DISPLAY_GRAPH:
         tracer_achats(trajets)
     return fretMP, resultat_usine_MP
@@ -357,7 +361,8 @@ def renverserMP_usine_fret(resultat_usine_MP:list):
 
     for mp in resultat_usine_MP[1:]:
         usines = mp[1]
-              
+        nomMP = mp[0]
+        
         for us in usines:
             depot_nom = us[0][1]
             tonnage = us[1]

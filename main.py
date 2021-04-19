@@ -97,8 +97,7 @@ def main():
             t =time.time()-p.starting_time))
         #Lecture du fichier d'achats
         listeAchats= gestionIntrants.lireBDDMP()
-        #Pour avoir la liste simple des matières premières
-        # listeMP = fonctionsMatrices.liste_unique(fonctionsMatrices.extraire_colonne_n(1,listeAchats[1:]))
+        
         
         print("[{t:6.2f}] ►Bilan carbone des intrants...".format(
             t =time.time()-p.starting_time))
@@ -118,7 +117,6 @@ def main():
         #On calcule ensuite le bilan carbone du fret et de fabrication en même temps
         fret, resultat_fret_usine_MP= fonctionsFret.calc_fret_par_MP(
             listeAchats,masse_vol_MP, FE_route, FE_bateau)
-        
         print("[{t:6.2f}] ►Finalisation du BC fabrication et fret amont...".format(
             t =time.time()-p.starting_time))
         usines_et_fret = fonctionsFret.renverserMP_usine_fret(
@@ -128,7 +126,7 @@ def main():
         
         fret = gestionIntrants.calc_fret_final(fret,MP_et_FE)
         #Tri à bulle de la liste de fret par plus grandes émissions
-        fret_FE_sorted = fonctionsMatrices.bubbleSortColonne(fret[1:],14, decroissant = False)
+        fret_FE_sorted =  fonctionsMatrices.bubbleSortColonne(fret[1:],16, decroissant = False)
         fret_FE_sorted.insert(0, fret[0])
         
         print("[{t:6.2f}] ►Bilan carbone de la tourbe et des engrais (EoL)...".format(

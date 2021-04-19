@@ -258,6 +258,7 @@ def regrouper_livraison(listeVentes:list):
 
 
 def calc_fret_aval(livraisons:list,FE_route:float, FE_bateau:float, bdd_exp_terre:list, bdd_exp_mari:list):
+    compte_km_total = 0
     stat = [0,0,0]
     nlivtot = len(livraisons)-1
     statis = [[l for l in range(5, 200, 5)]+[l for l in range(200, 1251, 50)]]
@@ -296,7 +297,7 @@ def calc_fret_aval(livraisons:list,FE_route:float, FE_bateau:float, bdd_exp_terr
                 bilan_carb = (FE_bateau*0.95+FE_route*0.05)*dist_t/1000
             else:
                 bilan_carb = FE_route*dist_t/1000
-            
+        compte_km_total += dist    
         #Pour tracer le graphe de la proximité des ventes
         for s in range(len(statis[0])):
             if dist<statis[0][s]:
@@ -346,6 +347,10 @@ def calc_fret_aval(livraisons:list,FE_route:float, FE_bateau:float, bdd_exp_terr
     if p.DISPLAY_GRAPH:
         #Tracé de la carte de proximité
         tracer_ventes(trajets, statis, nlivtot)
+    print("Km aval total : "+str(int(compte_km_total))+"km")
+    print(totGP)
+    print(totINT)
+    print(totPRO)
     return res, [totGP, totINT, totPRO]
 
 def tracer_ventes(trajets, statis, nlivtot):

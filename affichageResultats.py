@@ -128,13 +128,13 @@ def sauveFret(sauveFret:list,chemin_ecriture:str, nom:str):
             case = col+str(lin)
             feuilleFret[case].style=styleFond
     #Redimmensionnement des colonnes pour plus de lisibilité
-    tailles = [40,16,12,12,12,14,18,16,18,15,17,17,13,12,16,16]
+    tailles = [40,12,18,16,12,12,12,14,18,16,18,15,17,17,13,12,16,16]
     for dim in range(len(tailles)):
         feuilleFret.column_dimensions[alphabet[dim]].width = tailles[dim]
         
     feuilleFret.row_dimensions[1].height = 60
     #On bloque la vue de la première ligne et colonne
-    feuilleFret.freeze_panes = "B2"
+    feuilleFret.freeze_panes = "C2"
     
     #On note ici le nom de la colonne et le numéro de la grandeur dans une ligne de fret_FE
     colonne_et_correspondance = [[sauveFret[0][i] , i] for i in range(len(sauveFret[0]))]
@@ -145,26 +145,26 @@ def sauveFret(sauveFret:list,chemin_ecriture:str, nom:str):
         feuilleFret.cell(row=1, column=i).value = colonne_et_correspondance[i-1][0]
         feuilleFret.cell(row=1, column=i).style = styleTeteTab
         feuilleFret.cell(row=1, column=i).alignment = Alignment(wrapText=True, horizontal='center', vertical = 'center')
-        
+    
     #Inscrit les valeurs dans le tableau ligne par ligne
-    for i in range(1,len(fret_FE)):
+    for i in range(0,len(fret_FE)):
+        nomMP = fret_FE[i][0]
+        
         # print(len(fret_FE[i]))
         for j in range(len(colonne_et_correspondance)):
-            # print("i:"+str(i)+", j:"+str(j))
-
-            feuilleFret.cell(row=i+1, column=j+1).value = fret_FE[i][colonne_et_correspondance[j][1]]
+            feuilleFret.cell(row=i+2, column=j+1).value = fret_FE[i][colonne_et_correspondance[j][1]]
             #On applique un style différent à la première colonne
             if j==0:
-                feuilleFret.cell(row=i+1, column=1).style = styleEntree
+                feuilleFret.cell(row=i+2, column=1).style = styleEntree
             else:
-                feuilleFret.cell(row=i+1, column=j+1).style = styleVal
+                feuilleFret.cell(row=i+2, column=j+1).style = styleVal
                 if j in [1,2,13,14,15]:
-                    feuilleFret.cell(row=i+1, column=j+1).number_format = '0'
+                    feuilleFret.cell(row=i+2, column=j+1).number_format = '0'
                 elif j in [3,4,5,6,7,8,9,10,11,12]:
-                    feuilleFret.cell(row=i+1, column=j+1).number_format = '0.0'
+                    feuilleFret.cell(row=i+2, column=j+1).number_format = '0.0'
                     
-    emphase_colonne_n(feuilleFret, 13)
-    emphase_colonne_n(feuilleFret, 14)
+    emphase_colonne_n(feuilleFret, 15)
+    emphase_colonne_n(feuilleFret, 16)
     #Affichage de graphe
     if True:
         #On crée un graphique en barre
@@ -178,8 +178,8 @@ def sauveFret(sauveFret:list,chemin_ecriture:str, nom:str):
         graphique.overlap = 100 
         #On prend en abscisses la première colonne
         mp = Reference(feuilleFret, min_col = 1, min_row = 2, max_row = len(fret_FE))
-        #Les ordonnées sont en colonnes 9 10 12
-        for i in [9,10,12]:
+        #Les ordonnées sont en colonnes 10 11 13
+        for i in [11,12,14]:
             #On ajoute une à une les séries
             valeurs =  Reference(feuilleFret, min_col=i, min_row=1, max_row=len(fret_FE))
             graphique.add_data(valeurs, titles_from_data=True)
@@ -195,7 +195,7 @@ def sauveFret(sauveFret:list,chemin_ecriture:str, nom:str):
         #Création du second axe de BC total
         axe2 = BarChart() #idem
         axe2.type = 'bar'
-        val2 = Reference(feuilleFret, min_col=15, min_row=1, max_row=len(fret_FE))
+        val2 = Reference(feuilleFret, min_col=17, min_row=1, max_row=len(fret_FE))
         axe2.set_categories(mp)
         axe2.add_data(val2, titles_from_data=True, from_rows=False)
         serie = axe2.series[0]
@@ -276,6 +276,7 @@ def entetes_resultats_generaux(usines:list, nom_fichier:str):
     feuilleprinc['D7'] = "=TEXT(SUM(D11:D"+str(199)+"), \"# ##0\")&+\" tCO2e\""
     feuilleprinc['E7'] = "et"
     feuilleprinc['F7'] = "=TEXT(1000*SUM(D11:D"+str(199)+")/"+str(production_totale)+", \"# ##0,0\")&+\" kgCO2e/m3\""
+    
     rouge = openpyxl.styles.colors.Color(rgb='00FF0000')
     for c in "CDEF":
         feuilleprinc[c+"7"].font = Font(size=18, color = rouge, bold=True)
@@ -467,7 +468,7 @@ def sauveTout(nom:str, recap:list):
 
     graphique2.add_data(valeurs2, titles_from_data=True, from_rows=True)
     graphique2.set_categories(sites)
-    graphique2.y_axis.title = 'Emissions Carbone par volume vendu (kgCO2e/m3)'
+    graphique2.y_axis.title = 'Emissions Carbone par volume produit (kgCO2e/m3)'
     feuille.add_chart(graphique2, "O38")
         
     if p.ELECTRICITE_ET_AUTRES and p.INTRANTS_ET_FRET and p.EMBALLAGES_ET_SACHERIE and p.FRET_AVAL:
@@ -490,7 +491,20 @@ def sauveTout(nom:str, recap:list):
         feuille.cell(row=l, column=3+nb_sites).font = Font(bold=True)
         feuille.cell(row=l, column=3+nb_sites).number_format = '0.0'
     
-    
+    # while l<50 and feuille.cell(row=l, column=2).value!= 'MP bateau':
+    #     l+=1
+    # l0 =l
+    # if l!=50:
+    #     feuille.cell(row=l-1, column=3+nb_sites).value = "Moyenne"
+    #     feuille.cell(row=l-1, column=3+nb_sites).font = Font(bold=True)
+    #     while feuille.cell(row=l, column=2).value!= None and l<50:
+    #         feuille.cell(row=l, column=3+nb_sites).value = "=AVERAGE(C"+str(l)+":"+alphabet[nb_sites+1]+str(l)+")"
+    #         feuille.cell(row=l, column=3+nb_sites).font = Font(italic=True)
+    #         feuille.cell(row=l, column=3+nb_sites).number_format = '0.0'
+    #         l+=1
+    #     feuille.cell(row=l, column=3+nb_sites).value = "=SUM("+alphabet[nb_sites+2]+str(l0)+":"+alphabet[nb_sites+2]+str(l-1)+")"
+    #     feuille.cell(row=l, column=3+nb_sites).font = Font(bold=True)
+    #     feuille.cell(row=l, column=3+nb_sites).number_format = '0.0'
     
     #Si on a la possibilité, on sauvegarde
     try:
@@ -539,7 +553,7 @@ def enregistre_resultat_resume(recap, ligne, colonne, feuille, nb_postes):
     feuille.cell(row=ligne, column=10).number_format = '#.0'
     ligne +=1
     
-    for li in range(1,len(recap)):
+    for li in range(1,len(recap)-1):
         for co in range(len(recap[0])):
             if co<1:
                 feuille.cell(row=ligne, column=1+colonne+co).value = recap[li][co]+ " (%)"
