@@ -176,7 +176,7 @@ def lireFE_matprem():
     return FE_familles, MP_familles_N, masse_vol_MP, FE_engrais
 
 def associerMPetFE_fab(MP_familles_N:list,FE_engrais:list,FE_familles:list):
-    liste_engrais_eol = [["Nom engrais", "Taux d'azote (%)", "FE épandage (tCO2e/t_azote)", "Masse (t)"]]
+    liste_engrais_eol = [["Nom engrais", "Taux d'azote (%)", "FE épandage (tCO2e/t_azote)", "Masse (t)", "FE épandag (kgCO2e/t_engrais)"]]
     MP_et_FE = [["Nom MP", "FE (kgCO2e/t)"]]
     for i in range(len(MP_familles_N)):
         nom_famille_BC = MP_familles_N[i][5]
@@ -194,7 +194,7 @@ def associerMPetFE_fab(MP_familles_N:list,FE_engrais:list,FE_familles:list):
                 fonctionsMatrices.print_log_erreur("La famille de l'engrais "+str(MP_familles_N[i][2])+" ("+str(nom_famille_BC)+
                                                    ") n'a pas été trouvé. On lui attribue un FE de 479.5 kgCO2/t (engrais moyen azoté à 10%)", inspect.stack()[0][3])
                 FE = 479.5
-            liste_engrais_eol.append([MP_familles_N[i][2],tx_N, p.FE_EMPANDAGE_ENGRAIS*p.PRG_N2O, 0])
+            liste_engrais_eol.append([MP_familles_N[i][2],tx_N, p.FE_EMPANDAGE_ENGRAIS*p.PRG_N2O, 0,1000*tx_N*p.FE_EMPANDAGE_ENGRAIS*p.PRG_N2O])
         else:
             try:
                 FE= fonctionsMatrices.recherche_elem(nom_famille_BC,FE_familles, 1,2)
@@ -202,10 +202,11 @@ def associerMPetFE_fab(MP_familles_N:list,FE_engrais:list,FE_familles:list):
                 fonctionsMatrices.print_log_erreur("L'élément "+str(nom_famille_BC)+" n'a pas été trouvé. On lui attribue un FE de 0", inspect.stack()[0][3])                
                 FE = 0
         MP_et_FE.append([MP_familles_N[i][2],FE])
+        
     return MP_et_FE, liste_engrais_eol
 
 
-def associer_nom_FEfab(listeAchats:list, MP_et_FE:list):
+def associer_nom_FEfab(listeAchats:list, MP_et_FE:list, liste_engrais_eol:list):
     nomsMP = fonctionsMatrices.liste_unique(fonctionsMatrices.extraire_colonne_n(1, listeAchats))
     
     MP_et_FEok = [x for x in MP_et_FE if x[0]!=""]
@@ -218,7 +219,7 @@ def associer_nom_FEfab(listeAchats:list, MP_et_FE:list):
     liste_introuves = []
     for i in range(1,len(nomsMP)):
         nom = nomsMP[i]
-        
+        nomFamille =  "A"
         #On cherche le facteur d'émission à la FABRICATION de la matière première (en kgCO2e par tonne de MP)
         trouve = False
         #On parcourt la liste des facteurs d'émission
@@ -374,7 +375,11 @@ def associer_nom_FEfab(listeAchats:list, MP_et_FE:list):
                 MP_et_FEok.append(temp)
         if not trouve:
             liste_introuves.append(nom)
-        
+    for assim in p.LISTE_ASSIMILATIONS:
+        for engrais in liste_engrais_eol:
+            if assim[1] == engrais[0]:
+                liste_engrais_eol.append([assim[0], engrais[1], engrais[2], engrais[3], engrais[4]])
+                break
     if len(liste_introuves)>1:
         fonctionsMatrices.print_log_erreur(str(len(liste_introuves))+ 
                                            " facteurs d'émission d'intrants sont à ajouter manuellement:", inspect.stack()[0][3])                
@@ -388,7 +393,7 @@ def associer_nom_FEfab(listeAchats:list, MP_et_FE:list):
         fonctionsMatrices.print_log_info("Ajout de "+str(len(MP_et_FEok)-n)+" entrées de FE dans les intrants par assimilation"+
                                          " (détail des assimilations dans le fichier résultat)", inspect.stack()[0][3])
 
-    return MP_et_FEok
+    return MP_et_FEok, liste_engrais_eol
 
 
 def BC_intrants_par_site(resultat_usine_MP:list, MP_et_FE:list):
@@ -486,13 +491,13 @@ def calc_fret_final(fret:list,MP_et_FE:list):
     fret[0].append("FE fabrication/extraction (kgCO2e/t)")
     fret[0].append("Somme FE fabri. +FE tranport cumulé (kgCO2e/t)")
     fret[0].append("Somme FE fabri. +FE tranport moyen (kgCO2e/t)")
-    fret[0].append("BC cumulé de l'intrant (tCO2e)")
+    fret[0].append("BC cumulé amont de l'intrant (tCO2e)")
     #fret[0].append("BC moyen de l'intrant (tCO2e)")
     
     return fret
 
 def calcul_protoxyde(resultat_fret_usine_MP, liste_engrais_eol):
-    tr = []
+
     res_protoxyde = [[x[0],0] for x in resultat_fret_usine_MP[-1][1]]
     for engrais in liste_engrais_eol:
         nom = engrais[0]
@@ -507,7 +512,6 @@ def calcul_protoxyde(resultat_fret_usine_MP, liste_engrais_eol):
                         if nom_usine.lower()==x[0][1].lower():
                             tonnage_usine= res_usine[1]
                             emissions = tonnage_usine*FE_epandage*tx_N #Emissions totales
-                            tr.append([nom, tx_N, tonnage_usine, 0, emissions])
                             x[1] += emissions
                             break               
                 break
@@ -515,7 +519,7 @@ def calcul_protoxyde(resultat_fret_usine_MP, liste_engrais_eol):
 
 def calcul_co2_tourbe(resultat_fret_usine_MP, massesvol):
     FE_eol = lire_FE_tourbe_eol()
-    
+    tourbes_eol = [["Nom tourbe", "FE EoL (kgCO2e/t)"]]
     res_co2_tourbe = [[x[0],0] for x in resultat_fret_usine_MP[-1][1]] #contient le résultat
     for mp in resultat_fret_usine_MP:
         nom = mp[0]
@@ -529,8 +533,9 @@ def calcul_co2_tourbe(resultat_fret_usine_MP, massesvol):
                 FE = FE_eol[2]
             else:
                 FE = FE_eol[1]
-                
-            #une fois qu'on a la masse vol. on range l'info dans la bonne case
+            tourbes_eol.append([nom, FE])
+            
+            
             for us in mp[1]: #us = usine
                 nom_us = us[0][1]
                 tonnage = us[1]
@@ -541,7 +546,7 @@ def calcul_co2_tourbe(resultat_fret_usine_MP, massesvol):
                         p.COMPARAISON_TOURBE[2]+=emissions
                         break
             
-    return res_co2_tourbe 
+    return res_co2_tourbe, tourbes_eol
 
 def lire_FE_tourbe_eol():
     try:
@@ -584,6 +589,32 @@ def calc_tourbe_par_usine(eol_tourbe:list,MP_par_usine:list, massesvol:list):
                                 # print("Qté de GES de cette tourbe sortant de cette usine :"+str(part_usine*tourbe[2]))
                                 # print("")
     return res
-            
-                    
+
+def ajoutEoLtableauFret(fret, liste_engrais_eol,tourbes_eol):
+    liste_engrais = [x[0] for x in liste_engrais_eol[1:]]
+    
+    for ligne in fret[1:]:
+        FE_epandage = 0
+        FE_EoL_tourbe = 0
+        nomMP = ligne[0]
+        if nomMP in liste_engrais:
+            for engrais in liste_engrais_eol:
+                distanceL = fonctionsMatrices.levenshtein(nomMP.lower(), engrais[0].lower())
+                if distanceL<4:
+                    FE_epandage =  engrais[4]  
+                    break
+        if "tourbe" in nomMP.lower():
+            for tourbe in tourbes_eol[1:]:
+                distanceL = fonctionsMatrices.levenshtein(nomMP.lower(), tourbe[0].lower())
+                if distanceL<4:
+                    FE_EoL_tourbe = tourbe[1]
+        ligne.append(FE_epandage)
+        ligne.append(FE_EoL_tourbe)
+        ligne.append(ligne[13]+ligne[10]+ligne[11]+ligne[17]+ligne[18])
+        ligne.append(ligne[16]+(ligne[19]*ligne[7]))
+    fret[0].append("FE épandage engrais (kgCO2e/t)")
+    fret[0].append("FE EoL tourbe (kgCO2e/t)")
+    fret[0].append("Total MP (fab+fret+EoL en kgCO2e/t)")
+    fret[0].append("BC cumulé avec EoL (fab+fret+EoL en tCO2e)")
+    return fret
     

@@ -165,6 +165,8 @@ def sauveFret(sauveFret:list,chemin_ecriture:str, nom:str):
                     
     emphase_colonne_n(feuilleFret, 15)
     emphase_colonne_n(feuilleFret, 16)
+    emphase_colonne_n(feuilleFret, 19)
+    emphase_colonne_n(feuilleFret, 20)
     #Affichage de graphe
     if True:
         #On crée un graphique en barre
@@ -179,7 +181,7 @@ def sauveFret(sauveFret:list,chemin_ecriture:str, nom:str):
         #On prend en abscisses la première colonne
         mp = Reference(feuilleFret, min_col = 1, min_row = 2, max_row = len(fret_FE))
         #Les ordonnées sont en colonnes 10 11 13
-        for i in [11,12,14]:
+        for i in [11,12,14,18,19]:
             #On ajoute une à une les séries
             valeurs =  Reference(feuilleFret, min_col=i, min_row=1, max_row=len(fret_FE))
             graphique.add_data(valeurs, titles_from_data=True)
@@ -195,7 +197,7 @@ def sauveFret(sauveFret:list,chemin_ecriture:str, nom:str):
         #Création du second axe de BC total
         axe2 = BarChart() #idem
         axe2.type = 'bar'
-        val2 = Reference(feuilleFret, min_col=17, min_row=1, max_row=len(fret_FE))
+        val2 = Reference(feuilleFret, min_col=21, min_row=1, max_row=len(fret_FE))
         axe2.set_categories(mp)
         axe2.add_data(val2, titles_from_data=True, from_rows=False)
         serie = axe2.series[0]

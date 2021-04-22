@@ -107,7 +107,7 @@ def main():
         MP_et_FE, liste_engrais_eol = gestionIntrants.associerMPetFE_fab(
             MP_familles_N,FE_engrais,FE_familles)
         #Fait le lien entre la table fret et la table des FE des intrants
-        MP_et_FE = gestionIntrants.associer_nom_FEfab(listeAchats, MP_et_FE)
+        MP_et_FE, liste_engrais_eol = gestionIntrants.associer_nom_FEfab(listeAchats, MP_et_FE,liste_engrais_eol)
         #Puis à une masse volumique
         masse_vol_MP = gestionIntrants.corriger_noms_massesvol(masse_vol_MP, MP_et_FE, listeAchats)
         
@@ -126,14 +126,17 @@ def main():
         
         fret = gestionIntrants.calc_fret_final(fret,MP_et_FE)
         #Tri à bulle de la liste de fret par plus grandes émissions
-        fret_FE_sorted =  fonctionsMatrices.bubbleSortColonne(fret[1:],16, decroissant = False)
-        fret_FE_sorted.insert(0, fret[0])
         
         print("[{t:6.2f}] ►Bilan carbone de la tourbe et des engrais (EoL)...".format(
             t =time.time()-p.starting_time))
         res_EoL_engrais, liste_engrais_eol = gestionIntrants.calcul_protoxyde(
             resultat_fret_usine_MP, liste_engrais_eol)
-        res_EoL_tourbe = gestionIntrants.calcul_co2_tourbe(resultat_fret_usine_MP, masse_vol_MP)
+        res_EoL_tourbe, tourbes_eol = gestionIntrants.calcul_co2_tourbe(resultat_fret_usine_MP, masse_vol_MP)
+
+        fret = gestionIntrants.ajoutEoLtableauFret(fret, liste_engrais_eol, tourbes_eol)
+        
+        fret_FE_sorted =  fonctionsMatrices.bubbleSortColonne(fret[1:],-1, decroissant = False)
+        fret_FE_sorted.insert(0, fret[0])
         
                 
         print("[{t:6.2f}] ►Enregistrement des résultats sur les matières premières...".format(

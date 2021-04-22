@@ -206,7 +206,7 @@ def tonnage_par_ref(lres, densitesPF,qte_vol_unit ):
         else:
             tonnage = quantite
     else:
-        densite = 0.38687
+        densite = 0.38687 #Si pas trouvé on prend la densité moyenne
         for d in densitesPF:
             if d[0].lower() == str(reference).lower():
                 densite = d[1]
@@ -271,10 +271,9 @@ def calc_fret_aval(livraisons:list,FE_route:float, FE_bateau:float, bdd_exp_terr
     totINT = [0,0,0]    #Déplacements internes
     totPRO = [0,0,0]    #Ventes pro
     res = [[[x[0],x[2],x[1]],[0, 0, 0]] for x in p.CP_SITES_FLORENTAISE] #L'élément 2 est le BC pour [GP INT et PRO]
-
+    
     for liv in fret_aval:
         bilan_carb =0
-        trouve = False
         cp_depot = liv[3][0][2]
         cp_livraison = liv[3][0][3]
         tonnage = liv[3][0][6]
@@ -331,15 +330,26 @@ def calc_fret_aval(livraisons:list,FE_route:float, FE_bateau:float, bdd_exp_terr
             stat[2]+=1
         
         #Correspondance: CLA/CLB/ANJ ==GP ; INT==INT; autre==pro*
-        for k in res:
-            if k[0][1]==liv[1]:  #On identifie l'usine à laquelle attribuer la vente (id CP)
-                if liv[2] in ["CLA", "CLB", "ANJ"]:
-                    k[1][0] += bilan_carb   #On range dans le bilan carbone par usine
-                elif liv[2] in ["INT"]:
+        trouve = False
+        
+        if liv[2]=="INT" and liv[3][0][3] in p.CP_FLORENTAISE: #S'il s'agit d'interdépot, on attribue les émissions au site qui le reçoit
+            for k in res:
+                if k[0][1] == liv[3][0][3] or (liv[3][0][3] ==40220 and k[0][1]==40210):
+                    trouve = True
                     k[1][1] += bilan_carb
-                else:
-                    k[1][2] += bilan_carb
-                break
+                    break
+        else:
+            for k in res:
+                if k[0][1] == liv[1] or (liv[1]==40220 and k[0][1]==40210): #On identifie l'usine à laquelle attribuer la vente (id CP)
+                    trouve = True
+                    if liv[2] in ["CLA", "CLB", "ANJ"]:
+                        k[1][0] += bilan_carb   #On range dans le bilan carbone par usine
+                    else:
+                        k[1][2] += bilan_carb
+                    break
+                
+        
+        
         trajets.append(["FR", geolocalisation.getGPSfromCP(cp_depot),
                         geolocalisation.getGPSfromCP(cp_livraison), dist,liv[3][0][3], bilan_carb, liv[2]])
     
@@ -348,9 +358,7 @@ def calc_fret_aval(livraisons:list,FE_route:float, FE_bateau:float, bdd_exp_terr
         #Tracé de la carte de proximité
         tracer_ventes(trajets, statis, nlivtot)
     print("Km aval total : "+str(int(compte_km_total))+"km")
-    print(totGP)
-    print(totINT)
-    print(totPRO)
+    
     return res, [totGP, totINT, totPRO]
 
 def tracer_ventes(trajets, statis, nlivtot):
