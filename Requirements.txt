@@ -1,0 +1,13 @@
+Anaconda Conda V>=3.0
+https://www.anaconda.com/products/individual
+
+Packages used:
+openpyxl
+inspect
+sys
+random
+time
+xlrd
+math
+logging
+numpy
