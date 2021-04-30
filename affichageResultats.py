@@ -7,7 +7,7 @@ Created on Mon Oct 19 15:33:38 2020
 import parametres as p
 import random
 import openpyxl
-from openpyxl.styles import Alignment, Side, Font, Border, PatternFill, NamedStyle
+from openpyxl.styles import Alignment, Side, Font, Border, PatternFill, NamedStyle, Color
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.chart.text import RichText
 from openpyxl.drawing.text import Paragraph, ParagraphProperties, CharacterProperties
@@ -219,7 +219,7 @@ def sauveFret(sauveFret:list,chemin_ecriture:str, nom:str):
         
     #Si on a la possibilité, on sauvegarde
     try:
-        log_fret.save(chemin_ecriture+nom)
+        log_fret.save(p.CHEMIN_ECRITURE_RESULTATS+nom)
     except PermissionError:     #Soit à cause du fichier réseau, soit parce que l'excel est ouvert ailleurs
         fonctionsMatrices.print_log_erreur("Permissions insuffisantes pour enregistrer le fichier résultat", inspect.stack()[0][3])
     except FileNotFoundError: #Emplacement inexistant
@@ -233,7 +233,51 @@ def sauve_resultats_generaux(nom_fichier:str):
             usines.append(x)
     entetes_resultats_generaux(usines, nom_fichier)
     return None
+def sauveTrajetsAval(trajets, nom):
+    try:
+         log_fret = openpyxl.load_workbook( p.CHEMIN_ECRITURE_RESULTATS+nom)
+    except FileNotFoundError:
+         fonctionsMatrices.print_log_erreur("Le document résultat n'est pas trouvé à l'emplacement "+p.CHEMIN_ECRITURE_RESULTATS+nom, inspect.stack()[0][3])
+         sys.exit("Le document résultat n'est pas trouvé à l'emplacement "+ p.CHEMIN_ECRITURE_RESULTATS+nom)
+    feuilleFretAval = log_fret.create_sheet("Fret Brut aval",1)
+    #On charge les styles précédemment enregistrés comme variables globales
+    styleFond, styleTeteTab, styleVal, styleTableau, styleEntree, styleTitre = p.STYLES_EXCEL
+    #[["pays","depart", "arrivee", "distance (km)","tonnage", "cout carbone (kgCO2e)", 'type', 'cp depart', 'cp arrivee']]
+    for x in trajets:
+        feuilleFretAval.append([x[0], x[3], x[4], x[5], x[6], x[7], x[8]])
+        
+     #Si on a la possibilité, on sauvegarde
+    try:
+        log_fret.save(p.CHEMIN_ECRITURE_RESULTATS+nom)
+    except PermissionError:     #Soit à cause du fichier réseau, soit parce que l'excel est ouvert ailleurs
+        fonctionsMatrices.print_log_erreur("Permissions insuffisantes pour enregistrer le fichier résultat", inspect.stack()[0][3])
+    except FileNotFoundError: #Emplacement inexistant
+        fonctionsMatrices.print_log_erreur("Emplacement d'écriture introuvable: "+str(p.CHEMIN_ECRITURE_RESULTATS + nom), inspect.stack()[0][3])
     
+    return None
+def sauveTrajetsAmont(trajets, nom):
+    try:
+         log_fret = openpyxl.load_workbook( p.CHEMIN_ECRITURE_RESULTATS+nom)
+    except FileNotFoundError:
+         fonctionsMatrices.print_log_erreur("Le document résultat n'est pas trouvé à l'emplacement "+p.CHEMIN_ECRITURE_RESULTATS+nom, inspect.stack()[0][3])
+         sys.exit("Le document résultat n'est pas trouvé à l'emplacement "+ p.CHEMIN_ECRITURE_RESULTATS+nom)
+    feuilleFretAmont = log_fret.create_sheet("Fret Brut MP",1)
+    #On charge les styles précédemment enregistrés comme variables globales
+    styleFond, styleTeteTab, styleVal, styleTableau, styleEntree, styleTitre = p.STYLES_EXCEL
+    
+    for x in trajets:
+        feuilleFretAmont.append([x[0], x[1], x[2], x[5], x[6], x[7], x[8],x[9]])
+        
+     #Si on a la possibilité, on sauvegarde
+    try:
+        log_fret.save(p.CHEMIN_ECRITURE_RESULTATS+nom)
+    except PermissionError:     #Soit à cause du fichier réseau, soit parce que l'excel est ouvert ailleurs
+        fonctionsMatrices.print_log_erreur("Permissions insuffisantes pour enregistrer le fichier résultat", inspect.stack()[0][3])
+    except FileNotFoundError: #Emplacement inexistant
+        fonctionsMatrices.print_log_erreur("Emplacement d'écriture introuvable: "+str(p.CHEMIN_ECRITURE_RESULTATS + nom), inspect.stack()[0][3])
+    
+    return None
+
 def entetes_resultats_generaux(usines:list, nom_fichier:str):
     styleFond, styleTeteTab, styleVal, styleTableau, styleEntree, styleTitre = p.STYLES_EXCEL
     
@@ -279,9 +323,9 @@ def entetes_resultats_generaux(usines:list, nom_fichier:str):
     feuilleprinc['E7'] = "et"
     feuilleprinc['F7'] = "=TEXT(1000*SUM(D11:D"+str(199)+")/"+str(production_totale)+", \"# ##0,0\")&+\" kgCO2e/m3\""
     
-    rouge = openpyxl.styles.colors.Color(rgb='00FF0000')
+    # rouge = openpyxl.styles.colors.Color(rgb='00FF0000')
     for c in "CDEF":
-        feuilleprinc[c+"7"].font = Font(size=18, color = rouge, bold=True)
+        feuilleprinc[c+"7"].font = Font(size=18, bold=True)
     #Si on a la possibilité, on sauvegarde
     try:
         document.save(p.CHEMIN_ECRITURE_RESULTATS+nom_fichier)

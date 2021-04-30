@@ -1,4 +1,4 @@
-        #       -*- coding: utf-8 -*-
+#       -*- coding: utf-8 -*-
 """
 Created on Thu Oct 15 15:38:37 2020
 
@@ -116,7 +116,7 @@ def main():
         #Calcul du fret par matiere premiere
         #On calcule ensuite le bilan carbone du fret et de fabrication en même temps
         fret, resultat_fret_usine_MP= fonctionsFret.calc_fret_par_MP(
-            listeAchats,masse_vol_MP, FE_route, FE_bateau)
+            listeAchats,masse_vol_MP, FE_route, FE_bateau, nom_fichier_resultat)
         print("[{t:6.2f}] ►Finalisation du BC fabrication et fret amont...".format(
             t =time.time()-p.starting_time))
         usines_et_fret = fonctionsFret.renverserMP_usine_fret(
@@ -194,7 +194,7 @@ def main():
         print("[{t:6.2f}] ►Calcul des distances...".format(
             t =time.time()-p.starting_time))
         BC_fret_aval_par_usine, BC_fret_aval = gestionExport.calc_fret_aval(
-            livraisons, FE_route, FE_bateau, bdd_exp_terre, bdd_exp_mari)
+            livraisons, FE_route, FE_bateau, bdd_exp_terre, bdd_exp_mari, nom_fichier_resultat)
         print("[{t:6.2f}] ►Enregistrement du fret aval...".format(
             t =time.time()-p.starting_time))
         resultat.enregistre_fret_aval_par_usine(BC_fret_aval_par_usine,production_par_site)

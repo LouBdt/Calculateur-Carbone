@@ -7,6 +7,7 @@ Created on Fri Oct 23 14:37:00 2020
 import parametres as p
 import xlrd
 import fonctionsMatrices
+import affichageResultats
 import geolocalisation
 import math
 import matplotlib.pyplot as plt
@@ -257,13 +258,14 @@ def regrouper_livraison(listeVentes:list):
     return livraisons
 
 
-def calc_fret_aval(livraisons:list,FE_route:float, FE_bateau:float, bdd_exp_terre:list, bdd_exp_mari:list):
+def calc_fret_aval(livraisons:list,FE_route:float, FE_bateau:float, bdd_exp_terre:list, bdd_exp_mari:list, nom:str):
     compte_km_total = 0
+    
     stat = [0,0,0]
     nlivtot = len(livraisons)-1
     statis = [[l for l in range(5, 200, 5)]+[l for l in range(200, 1251, 50)]]
     statis.append([0 for x in statis[0]])
-    trajets = [["pays","depart", "arrivee", "distance (km)","tonnage", "cout carbone (kgCO2e)", 'type']]
+    trajets = [["pays","depart", "arrivee", "distance (km)","tonnage", "cout carbone (tCO2e)", 'type', 'CP départ', "CP arrivée"]]
     fret_aval = [[x[0],x[1], x[2], x[3], 0, 0] for x in livraisons[1:]]
     lire_conversion_sacherie_GCO()
     #pour chaque marché: distance+distance.t+distance.t.fe
@@ -299,7 +301,7 @@ def calc_fret_aval(livraisons:list,FE_route:float, FE_bateau:float, bdd_exp_terr
         compte_km_total += dist    
         #Pour tracer le graphe de la proximité des ventes
         for s in range(len(statis[0])):
-            if dist<statis[0][s]:
+            if dist<statis[0][s] and liv[2] != 'INT':
                 statis[1][s] +=1
         #Dans le cas où le bilan carbone est négatif (masse transportée négative) on enregistre la valeur absolue
             #il s'agit d'un retour (donc dans l'autre sens, mais BC toujours positif)
@@ -351,14 +353,14 @@ def calc_fret_aval(livraisons:list,FE_route:float, FE_bateau:float, bdd_exp_terr
         
         
         trajets.append(["FR", geolocalisation.getGPSfromCP(cp_depot),
-                        geolocalisation.getGPSfromCP(cp_livraison), dist,liv[3][0][3], bilan_carb, liv[2]])
+                        geolocalisation.getGPSfromCP(cp_livraison), dist,liv[3][0][6], bilan_carb, liv[2], cp_depot, cp_livraison])
     
     
     if p.DISPLAY_GRAPH:
         #Tracé de la carte de proximité
         tracer_ventes(trajets, statis, nlivtot)
     print("Km aval total : "+str(int(compte_km_total))+"km")
-    
+    affichageResultats.sauveTrajetsAval(trajets, nom)
     return res, [totGP, totINT, totPRO]
 
 def tracer_ventes(trajets, statis, nlivtot):

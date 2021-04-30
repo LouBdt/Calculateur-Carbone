@@ -1,4 +1,4 @@
-    # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Created on Fri Oct 16 10:32:07 2020
 
@@ -485,14 +485,13 @@ def calc_fret_final(fret:list,MP_et_FE:list):
         mp.append(FE_MPfab)
         mp.append(FE_MPfab+FE_MPtrans_cumule)#Pas beaucoup de sens tel quel mais besoin pour la suite du calcul
         mp.append(FE_MPfab+FE_MPtrans_moy)#Pas nécessaire à la suite mais utile pour le BC produits
-        mp.append(tonnage*mp[14]/1000) #BC cumulé matière avec conversion en t de CO2e   #(en colonne 15)
-        #mp.append(tonnage*mp[15]/1000 ) #BC moyen matière avec conversion en t de CO2e    #(en colonne 16)
+        mp.append(tonnage*mp[15]/1000) #BC cumulé matière avec conversion en t de CO2e   #(en colonne 15)
+        
     
     fret[0].append("FE fabrication/extraction (kgCO2e/t)")
     fret[0].append("Somme FE fabri. +FE tranport cumulé (kgCO2e/t)")
     fret[0].append("Somme FE fabri. +FE tranport moyen (kgCO2e/t)")
     fret[0].append("BC cumulé amont de l'intrant (tCO2e)")
-    #fret[0].append("BC moyen de l'intrant (tCO2e)")
     
     return fret
 
@@ -611,7 +610,7 @@ def ajoutEoLtableauFret(fret, liste_engrais_eol,tourbes_eol):
         ligne.append(FE_epandage)
         ligne.append(FE_EoL_tourbe)
         ligne.append(ligne[13]+ligne[10]+ligne[11]+ligne[17]+ligne[18])
-        ligne.append(ligne[16]+(ligne[19]*ligne[7]))
+        ligne.append((ligne[19]*ligne[7]/1000))
     fret[0].append("FE épandage engrais (kgCO2e/t)")
     fret[0].append("FE EoL tourbe (kgCO2e/t)")
     fret[0].append("Total MP (fab+fret+EoL en kgCO2e/t)")

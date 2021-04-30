@@ -15,6 +15,7 @@ Ensemble des fonctions relatives au calcul du bilan carbone du fret des matière
 """
 import parametres as p
 import fonctionsMatrices
+import affichageResultats
 import geolocalisation
 import math
 import xlrd
@@ -54,9 +55,9 @@ def lire_FEtransport():
 #   ->Un tableau contenant ["M3", quantite de M3]["KG", quantite de kg]...etc
 #      Attention, ce tableau n'est pas une conversion, mais bien les achats bruts. On a pas encore les densités pour convertir
 #Permet également de corriger les erreurs de codes postaux au passage
-def calc_fret_par_MP(listeAchatsFret:list, masse_vol_MP:list, FE_route, FE_bateau):
+def calc_fret_par_MP(listeAchatsFret:list, masse_vol_MP:list, FE_route, FE_bateau, nom_fichier):
     
-    trajets = [["Pays", "depart", "arrivee", "distance (km)","qte",'unit',  "cout carbone (kgCO2e)"]]
+    trajets = [["nomMP", "nomFournisseur","Pays", "depart", "arrivee", "distance route (km)","distance bateau (km)","qte",'unit',"depot_arrive"]]
     Stat = [0,0]
     listeAchats = listeAchatsFret[1:] 
     fretMP = []
@@ -168,7 +169,9 @@ def calc_fret_par_MP(listeAchatsFret:list, masse_vol_MP:list, FE_route, FE_batea
     print("Km amont total : "+str(int(compte_km_total))+"km")
     if p.DISPLAY_GRAPH:
         tracer_achats(trajets)
+    affichageResultats.sauveTrajetsAmont(trajets, nom_fichier)
     return fretMP, resultat_usine_MP
+
 
 
 def calcul_distance_fret_amont(listeAchatsj, trajets, import_terrestre, import_maritime):
@@ -210,8 +213,8 @@ def calcul_distance_fret_amont(listeAchatsj, trajets, import_terrestre, import_m
                     p.LISTE_CODES_POSTAUX_ERRONES.append([distanceRoute[1], "Achats"])
                     distanceRoute = 0
         try:
-            trajets.append([pays,geolocalisation.getGPSfromCP(CP_depart), 
-                            geolocalisation.getGPSfromCP(depot_arrive), distanceRoute, quantite, unit, 0])
+            trajets.append([nomMP, nom_fourn,pays,geolocalisation.getGPSfromCP(CP_depart), 
+                            geolocalisation.getGPSfromCP(depot_arrive), distanceRoute, 0,quantite, unit,depot_arrive])
         except ValueError:
             print("ValEror ")
     else: #Sinon ça vient de l'étranger: exception: si un tourbe est livrée dans certains dépots, c'est par camion
@@ -244,8 +247,8 @@ def calcul_distance_fret_amont(listeAchatsj, trajets, import_terrestre, import_m
                 else:
                     p.LISTE_CODES_POSTAUX_ERRONES.append([distanceRoute[1], "Achats"])
                     distanceRoute = 0 
-            trajets.append([pays,[longA, latA], 
-                            geolocalisation.getGPSfromCP(depot_arrive), distanceRoute, quantite, unit, 0])
+            trajets.append([nomMP, nom_fourn,pays,[longA, latA], 
+                            geolocalisation.getGPSfromCP(depot_arrive), distanceRoute,0, quantite, unit,depot_arrive])
         #=======BATEAU===
         else: #Sinon ça prend le bateau
             nombre_livraisons_bateau +=1
@@ -277,8 +280,8 @@ def calcul_distance_fret_amont(listeAchatsj, trajets, import_terrestre, import_m
                 if not calcul_distance[1]: #Si pas d'erreur dans le calcul de distance:
                     distanceRoute_supplementaire = p.facteur_route*calcul_distance[0]
                     distanceRoute += distanceRoute_supplementaire
-                    trajets.append(["bateau",[ longPort,latPort], 
-                            geolocalisation.getGPSfromCP(depot_arrive), distanceRoute, quantite, unit, 0])
+                    trajets.append([nomMP, nom_fourn,"bateau",[ longPort,latPort], 
+                            geolocalisation.getGPSfromCP(depot_arrive), distanceRoute,distanceBateau, quantite, unit,depot_arrive])
                     
                 else:
                     fonctionsMatrices.print_log_erreur("Le dépot d'arrivée "+depot_arrive+" n'a pas été trouvé pour "+nomMP, inspect.stack()[0][3])
@@ -389,12 +392,12 @@ def tracer_achats(trajets):
         plt.title('Achats [rouge:français; vert:maritime; bleu:européen]')
         for tra in trajets[1:]:
             
-            if "fra" in tra[0].lower():
-                plt.plot([tra[1][0], tra[2][0]], [tra[1][1], tra[2][1]], '-r',linewidth = grossissement*0.3, zorder = 1, alpha = 0.6)#lw = 100/(tra[3]+1)
+            if "fra" in tra[2].lower():
+                plt.plot([tra[3][0], tra[4][0]], [tra[3][1], tra[4][1]], '-r',linewidth = grossissement*0.3, zorder = 1, alpha = 0.6)#lw = 100/(tra[3]+1)
             elif tra[0]=="bateau":
-                plt.plot([tra[1][0], tra[2][0]], [tra[1][1], tra[2][1]], '-g',linewidth = grossissement*0.3, zorder = 1, alpha = 0.6)#lw = 100/(tra[3]+1)
+                plt.plot([tra[3][0], tra[4][0]], [tra[3][1], tra[4][1]], '-g',linewidth = grossissement*0.3, zorder = 1, alpha = 0.6)#lw = 100/(tra[3]+1)
             else:
-                plt.plot([tra[1][0], tra[2][0]], [tra[1][1], tra[2][1]], '-b',linewidth = grossissement*0.3, zorder = 1, alpha = 0.6)#lw = 100/(tra[3]+1)
+                plt.plot([tra[3][0], tra[4][0]], [tra[3][1], tra[4][1]], '-b',linewidth = grossissement*0.3, zorder = 1, alpha = 0.6)#lw = 100/(tra[3]+1)
             
         i = 0
         for ville in p.BDDgeoloc:
@@ -414,10 +417,10 @@ def tracer_achats(trajets):
             tx_achats_a_moins_de_Xkm = 0
             somme = 0
             for tra in trajets[1:]:
-                latA =  tra[1][0]
-                longA = tra[1][1]
-                latB =  tra[2][0]
-                longB = tra[2][1]
+                latA =  tra[3][0]
+                longA = tra[3][1]
+                latB =  tra[4][0]
+                longB = tra[4][1]
                 distance = math.acos(math.sin(latA)*math.sin(latB)+math.cos(latA)*
                       math.cos(latB)*math.cos(longB-longA))*6371*p.facteur_route
                 somme +=1
